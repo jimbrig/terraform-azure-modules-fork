@@ -16,14 +16,14 @@ resource "azapi_resource" "oneespool" {
 
   parent_id = azurerm_resource_group.onees_runner_pool.id
   type      = "Microsoft.CloudTest/hostedpools@2020-05-07"
-  body      = jsonencode({
+  body = jsonencode({
     properties = {
       organizationProfile = {
         type = "GitHub",
         url  = each.value
       }
       networkProfile = {
-        natGatewayIpAddressCount = 1
+        subnetId = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${azurerm_resource_group.onees_runner_pool.name}/providers/Microsoft.Network/virtualNetworks/${azurerm_virtual_network.onees_vnet[try(local.repo_region[each.value], "eastus")].name}/subnets/${azurerm_subnet.runner[each.value].name}"
       }
       vmProviderProperties = {
         VssAdminPermissions = "CreatorOnly"
@@ -32,7 +32,7 @@ resource "azapi_resource" "oneespool" {
         type = "Stateless"
       }
       maxPoolSize = try(local.repo_pool_max_runners[each.value], 3)
-      images      = [
+      images = [
         {
           imageName            = "ghrunner"
           subscriptionId       = data.azurerm_client_config.current.subscription_id
@@ -47,10 +47,10 @@ resource "azapi_resource" "oneespool" {
       vmProvider = "Azure"
     }
   })
-  location                  = try(local.repo_region[each.value], "eastus")
-  name                      = lookup(local.repo_pool_names, each.value, local.repo_names[each.value])
+  location = try(local.repo_region[each.value], "eastus")
+  name = lookup(local.repo_pool_names, each.value, local.repo_names[each.value])
   schema_validation_enabled = false
-  tags                      = {
+  tags = {
     repo_url = each.value
   }
 
@@ -58,6 +58,18 @@ resource "azapi_resource" "oneespool" {
     create = "30m"
     delete = "30m"
     read   = "10m"
+  }
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
+  }
+}
+
+resource "null_resource" "pool_size_keeper" {
+  for_each = toset(local.repos)
+  triggers = {
+    size = try(local.repo_pool_max_runners[each.value], 3)
   }
 }
 
@@ -67,13 +79,18 @@ resource "azapi_update_resource" "identity" {
   type = "Microsoft.CloudTest/hostedpools@2020-05-07"
   body = jsonencode({
     identity = {
-      type                   = "UserAssigned"
+      type = "UserAssigned"
       userAssignedIdentities = {
         (azurerm_user_assigned_identity.pool_identity["runner"].id) : {}
       }
     }
   })
   resource_id = azapi_resource.oneespool[each.value].id
+  lifecycle {
+    replace_triggered_by = [
+      null_resource.pool_size_keeper[each.key]
+    ]
+  }
 }
 
 # Onees Pool with Azure Firewall is still WIP. It seems like we cannot share one subnet with multiple pools, so this
@@ -162,7 +179,7 @@ data azurerm_user_assigned_identity bambrane_operator {
 resource "azapi_resource" "onees_meta_pool" {
   parent_id = azurerm_resource_group.onees_runner_pool.id
   type      = "Microsoft.CloudTest/hostedpools@2020-05-07"
-  body      = jsonencode({
+  body = jsonencode({
     properties = {
       organizationProfile = {
         type = "GitHub",
@@ -178,7 +195,7 @@ resource "azapi_resource" "onees_meta_pool" {
         type = "Stateless"
       }
       maxPoolSize = 3
-      images      = [
+      images = [
         {
           imageName            = "bambrane-runner"
           subscriptionId       = data.azurerm_client_config.current.subscription_id
@@ -196,7 +213,7 @@ resource "azapi_resource" "onees_meta_pool" {
   location                  = "eastus"
   name                      = "terraform-azure-modules"
   schema_validation_enabled = false
-  tags                      = {
+  tags = {
     repo_url = "https://github.com/Azure/terraform-azure-modules"
   }
 
@@ -205,13 +222,18 @@ resource "azapi_resource" "onees_meta_pool" {
     delete = "30m"
     read   = "10m"
   }
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
+  }
 }
 
 resource "azapi_update_resource" "runner_backend_identity" {
   type = "Microsoft.CloudTest/hostedpools@2020-05-07"
   body = jsonencode({
     identity = {
-      type                   = "UserAssigned"
+      type = "UserAssigned"
       userAssignedIdentities = {
         (data.azurerm_user_assigned_identity.bambrane_operator.id) : {}
       }
@@ -225,7 +247,7 @@ resource "azapi_resource" "onees_pool_with_backend" {
 
   parent_id = azurerm_resource_group.onees_runner_pool.id
   type      = "Microsoft.CloudTest/hostedpools@2020-05-07"
-  body      = jsonencode({
+  body = jsonencode({
     properties = {
       organizationProfile = {
         type = "GitHub",
@@ -241,7 +263,7 @@ resource "azapi_resource" "onees_pool_with_backend" {
         type = "Stateless"
       }
       maxPoolSize = 3
-      images      = [
+      images = [
         {
           imageName            = "bambrane-runner"
           subscriptionId       = data.azurerm_client_config.current.subscription_id
@@ -257,9 +279,9 @@ resource "azapi_resource" "onees_pool_with_backend" {
     }
   })
   location                  = "eastus"
-  name                      = lookup(local.repo_pool_names, each.value, reverse(split("/", each.value))[0])
+  name = lookup(local.repo_pool_names, each.value, reverse(split("/", each.value))[0])
   schema_validation_enabled = false
-  tags                      = {
+  tags = {
     repo_url = each.value
   }
 
@@ -267,6 +289,11 @@ resource "azapi_resource" "onees_pool_with_backend" {
     create = "30m"
     delete = "30m"
     read   = "10m"
+  }
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -276,7 +303,7 @@ resource "azapi_update_resource" "gitops_runner_backend_identity" {
   type = "Microsoft.CloudTest/hostedpools@2020-05-07"
   body = jsonencode({
     identity = {
-      type                   = "UserAssigned"
+      type = "UserAssigned"
       userAssignedIdentities = {
         (data.azurerm_user_assigned_identity.bambrane_operator.id) : {}
       }

@@ -8,19 +8,34 @@ locals {
     "https://github.com/Azure/terraform" : "terraform-azurerm-doc"
     "https://github.com/Azure/terraform-azurerm-hubnetworking" : "terraform-azure-hubnetworking"
     "https://github.com/Azure/terraform-azure-container-apps" : "terraform-azurerm-container-apps"
-    "https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccounts": "terraform-azure-storage-account"
   })
   repo_pool_max_runners = tomap({
     "https://github.com/Azure/terraform-azurerm-avm-ptn-virtualwan": 14
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-disk": 5
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-virtualnetwork": 5
+    "https://github.com/Azure/terraform-azurerm-avm-res-cdn-profile": 8
+    "https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccount": 5
   })
+  // Please do not delete a repo name if the repo is no longer available, put deprecated repo in this list so subnet's order won't be changed.
   bypass_set = toset([
     "https://github.com/Azure/terraform-azurerm-avm-res-authorization-roleassignment",   # needs access at higher scopes than subscription
     "https://github.com/Azure/terraform-azurerm-avm-ptn-alz",
     "https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccounts", # Would be cancelled by 1es, need further investigation
+#     "https://github.com/Azure/terraform-azurerm-avm-res-insights-component",
   ])
+  regions = toset(["eastus", "eastus2", "westeurope"])
   repo_region = tomap({
     "https://github.com/Azure/terraform-azurerm-avm-ptn-virtualnetworkpeering": "westeurope",
-    "https://github.com/lonegunmanb/avm-gh-app": "eastus2"
+    "https://github.com/Azure/terraform-azurerm-avm-res-insights-component": "eastus2",
+    "https://github.com/lonegunmanb/avm-gh-app": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-function-app-storage-private-endpoints": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-disk": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-res-cache-redis": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-res-search-searchservice": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-res-logic-workflow": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-policyassignment": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-applicationsecuritygroup": "eastus2",
+    "https://github.com/Azure/terraform-azurerm-avm-res-batch-batchaccount": "eastus2",
   })
   avm_res_mod_csv = file("${path.module}/Azure-Verified-Modules/docs/static/module-indexes/TerraformResourceModules.csv")
   avm_pattern_mod_csv = file("${path.module}/Azure-Verified-Modules/docs/static/module-indexes/TerraformPatternModules.csv")
@@ -45,8 +60,10 @@ locals {
     "https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccounts",
     "https://github.com/Azure/terraform-azurerm-avm-res-keyvault-vault",
     "https://github.com/WodansSon/terraform-azurerm-cdn-frontdoor",
-    "https://github.com/lonegunmanb/avm-gh-app",
+    "https://github.com/Azure/avm-gh-app",
+    "https://github.com/Azure/oneesrunnerscleaner",
   ], local.valid_avm_repos) : r if !contains(local.bypass_set, r)]
+
   repo_names = {
     for r in distinct(local.repos) : r => length(reverse(split("/", r))[0]) >= 45 ? sha1(reverse(split("/", r))[0]) : reverse(split("/", r))[0]
   }
@@ -57,6 +74,110 @@ locals {
   repos_with_backend = [
     "https://github.com/lonegunmanb/TerraformModuleTelemetryService"
   ]
+
+  repo_index = { for k, v in {
+    "https://github.com/Azure/terraform-azurerm-aks" : 0,
+    "https://github.com/Azure/terraform-azurerm-compute" : 1,
+    "https://github.com/Azure/terraform-azurerm-loadbalancer" : 2,
+    "https://github.com/Azure/terraform-azurerm-network" : 3,
+    "https://github.com/Azure/terraform-azurerm-network-security-group" : 4,
+    "https://github.com/Azure/terraform-azurerm-postgresql" : 5,
+    "https://github.com/Azure/terraform-azurerm-subnets" : 6,
+    "https://github.com/Azure/terraform-azurerm-vnet" : 7,
+    "https://github.com/Azure/terraform-azurerm-virtual-machine" : 8,
+    "https://github.com/Azure/terraform" : 9,
+    "https://github.com/Azure/terraform-azurerm-hubnetworking" : 10,
+    "https://github.com/Azure/terraform-azurerm-openai" : 11,
+    "https://github.com/Azure/terraform-azure-mdc-defender-plans-azure" : 12,
+    "https://github.com/Azure/terraform-azurerm-database" : 13,
+    "https://github.com/Azure/terraform-azure-container-apps" : 14,
+    "https://github.com/Azure/terraform-azurerm-avm-res-keyvault-vault" : 15,
+    "https://github.com/WodansSon/terraform-azurerm-cdn-frontdoor" : 16,
+    "https://github.com/Azure/avm-gh-app" : 17,
+    "https://github.com/Azure/oneesrunnerscleaner" : 18,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-aks-production" : 19,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-alz-management" : 20,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-avd-lza-insights" : 21,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-avd-lza-managementplane" : 22,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-bcdr-vm-replication" : 23,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-cicd-agents-and-runners" : 24,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-confidential-compute" : 25,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-function-app-storage-private-endpoints" : 26,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-hubnetworking" : 27,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-network-private-link-private-dns-zones" : 28,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-policyassignment" : 29,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-virtualnetworkpeering" : 30,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-virtualwan" : 31,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-vnetgateway" : 32,
+    "https://github.com/Azure/terraform-azurerm-avm-res-app-containerapp" : 33,
+    "https://github.com/Azure/terraform-azurerm-avm-res-app-managedenvironment" : 34,
+    "https://github.com/Azure/terraform-azurerm-avm-res-automation-automationaccount" : 35,
+    "https://github.com/Azure/terraform-azurerm-avm-res-avs-privatecloud" : 36,
+    "https://github.com/Azure/terraform-azurerm-avm-res-batch-batchaccount" : 37,
+    "https://github.com/Azure/terraform-azurerm-avm-res-cache-redis" : 38,
+    "https://github.com/Azure/terraform-azurerm-avm-res-cdn-profile" : 39,
+    "https://github.com/Azure/terraform-azurerm-avm-res-cognitiveservices-account" : 40,
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-disk" : 41,
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-hostgroup" : 42,
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-proximityplacementgroup" : 43,
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-sshpublickey" : 44,
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-virtualmachine" : 45,
+    "https://github.com/Azure/terraform-azurerm-avm-res-compute-virtualmachinescaleset" : 46,
+    "https://github.com/Azure/terraform-azurerm-avm-res-containerinstance-containergroup" : 47,
+    "https://github.com/Azure/terraform-azurerm-avm-res-containerregistry-registry" : 48,
+    "https://github.com/Azure/terraform-azurerm-avm-res-databricks-workspace" : 49,
+    "https://github.com/Azure/terraform-azurerm-avm-res-dbformysql-flexibleserver" : 50,
+    "https://github.com/Azure/terraform-azurerm-avm-res-dbforpostgresql-flexibleserver" : 51,
+    "https://github.com/Azure/terraform-azurerm-avm-res-desktopvirtualization-applicationgroup" : 52,
+    "https://github.com/Azure/terraform-azurerm-avm-res-desktopvirtualization-hostpool" : 53,
+    "https://github.com/Azure/terraform-azurerm-avm-res-desktopvirtualization-scalingplan" : 54,
+    "https://github.com/Azure/terraform-azurerm-avm-res-desktopvirtualization-workspace" : 55,
+    "https://github.com/Azure/terraform-azurerm-avm-res-documentdb-databaseaccount" : 56,
+    "https://github.com/Azure/terraform-azurerm-avm-res-eventhub-namespace" : 57,
+    "https://github.com/Azure/terraform-azurerm-avm-res-insights-component" : 58,
+    "https://github.com/Azure/terraform-azurerm-avm-res-kusto-cluster" : 59,
+    "https://github.com/Azure/terraform-azurerm-avm-res-loadtestservice-loadtest" : 60,
+    "https://github.com/Azure/terraform-azurerm-avm-res-logic-workflow" : 61,
+    "https://github.com/Azure/terraform-azurerm-avm-res-managedidentity-userassignedidentity" : 62,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-applicationgateway" : 63,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-applicationsecuritygroup" : 64,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-azurefirewall" : 65,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-bastionhost" : 66,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-ddosprotectionplan" : 67,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-dnsresolver" : 68,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-expressroutecircuit" : 69,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-firewallpolicy" : 70,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-loadbalancer" : 71,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-natgateway" : 72,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-networkinterface" : 73,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-networkmanager" : 74,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-networksecuritygroup" : 75,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-networkwatcher" : 76,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-privatednszone" : 77,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-privateendpoint" : 78,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-publicipaddress" : 79,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-routetable" : 80,
+    "https://github.com/Azure/terraform-azurerm-avm-res-network-virtualnetwork" : 81,
+    "https://github.com/Azure/terraform-azurerm-avm-res-operationalinsights-workspace" : 82,
+    "https://github.com/Azure/terraform-azurerm-avm-res-recoveryservices-vault" : 83,
+    "https://github.com/Azure/terraform-azurerm-avm-res-search-searchservice" : 84,
+    "https://github.com/Azure/terraform-azurerm-avm-res-servicebus-namespace" : 85,
+#     "https://github.com/Azure/terraform-azurerm-avm-res-sql-instancepool" : 86,
+    "https://github.com/Azure/terraform-azurerm-avm-res-sql-managedinstance" : 87,
+    "https://github.com/Azure/terraform-azurerm-avm-res-sql-server" : 88,
+    "https://github.com/Azure/terraform-azurerm-avm-res-sqlvirtualmachine-sqlvirtualmachine" : 89,
+    "https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccount" : 90,
+    "https://github.com/Azure/terraform-azurerm-avm-res-synapse-workspace" : 91,
+    "https://github.com/Azure/terraform-azurerm-avm-res-web-hostingenvironment" : 92,
+    "https://github.com/Azure/terraform-azurerm-avm-res-web-serverfarm" : 93,
+    "https://github.com/Azure/terraform-azurerm-avm-res-web-site" : 94,
+    "https://github.com/Azure/terraform-azurerm-avm-res-web-staticsite" : 95,
+    "https://github.com/Azure/terraform-azurerm-avm-res-resources-resourcegroup": 96,
+    "https://github.com/Azure/terraform-azurerm-avm-res-insights-scheduledqueryrule": 97,
+    "https://github.com/Azure/terraform-azurerm-avm-ptn-network-routeserver": 98,
+
+  } : k => tostring(v)}
+
   runner_network_whitelist = sort(distinct([
     # OneES
     "*.dev.cloudtest.microsoft.com",
@@ -223,3 +344,4 @@ locals {
 #    "aka.ms",
   ]))
 }
+
